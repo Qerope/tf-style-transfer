@@ -12,6 +12,7 @@ LAYERS = [
     'conv4_1', 'relu4_1', 'conv4_2', 'relu4_2', 'conv4_3', 'relu4_3', 'conv4_4', 'relu4_4', 'pool4',
     'conv5_1', 'relu5_1', 'conv5_2', 'relu5_2', 'conv5_3', 'relu5_3', 'conv5_4', 'relu5_4',
 ]
+CONTENT_LAYER = 'conv4_2'
 
 
 def load_image(path):
@@ -42,3 +43,8 @@ def build_vgg(shape, weights_path='imagenet-vgg-verydeep-19.mat'):
             current = tf.nn.avg_pool(current, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
         net[name] = current
     return net
+        sess.run(net['input'].assign(content))
+        content_target = sess.run(net[CONTENT_LAYER])
+
+        content_loss = tf.reduce_mean(tf.square(net[CONTENT_LAYER] - content_target))
+        loss = content_loss
