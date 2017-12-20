@@ -13,6 +13,7 @@ LAYERS = [
     'conv5_1', 'relu5_1', 'conv5_2', 'relu5_2', 'conv5_3', 'relu5_3', 'conv5_4', 'relu5_4',
 ]
 CONTENT_LAYER = 'conv4_2'
+STYLE_LAYERS = ['conv1_1', 'conv2_1', 'conv3_1', 'conv4_1', 'conv5_1']
 
 
 def load_image(path):
@@ -43,8 +44,18 @@ def build_vgg(shape, weights_path='imagenet-vgg-verydeep-19.mat'):
             current = tf.nn.avg_pool(current, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
         net[name] = current
     return net
+
+
+def gram(x):
+    _, h, w, c = x.get_shape().as_list()
+    f = tf.reshape(x, (h * w, c))
+    return tf.matmul(f, f, transpose_a=True) / (h * w * c)
         sess.run(net['input'].assign(content))
         content_target = sess.run(net[CONTENT_LAYER])
+        sess.run(net['input'].assign(style))
+        style_targets = {l: sess.run(gram(net[l])) for l in STYLE_LAYERS}
 
         content_loss = tf.reduce_mean(tf.square(net[CONTENT_LAYER] - content_target))
-        loss = content_loss
+        style_loss = sum(tf.reduce_mean(tf.square(gram(net[l]) - style_targets[l])) for l in STYLE_LAYERS)
+        style_loss /= len(STYLE_LAYERS)
+        loss = 5.0 * content_loss + 100.0 * style_loss
