@@ -50,6 +50,16 @@ def gram(x):
     _, h, w, c = x.get_shape().as_list()
     f = tf.reshape(x, (h * w, c))
     return tf.matmul(f, f, transpose_a=True) / (h * w * c)
+
+
+def main():
+    content = load_image('content.jpg')
+    style = scipy.misc.imread('style.jpg')
+    style = style[np.newaxis] - VGG_MEAN
+    shape = content.shape
+
+    with tf.Session() as sess:
+        net = build_vgg(shape)
         sess.run(net['input'].assign(content))
         content_target = sess.run(net[CONTENT_LAYER])
         sess.run(net['input'].assign(style))
@@ -59,3 +69,16 @@ def gram(x):
         style_loss = sum(tf.reduce_mean(tf.square(gram(net[l]) - style_targets[l])) for l in STYLE_LAYERS)
         style_loss /= len(STYLE_LAYERS)
         loss = 5.0 * content_loss + 100.0 * style_loss
+        train = tf.train.AdamOptimizer(2.0).minimize(loss)
+        sess.run(tf.global_variables_initializer())
+        noise = np.random.uniform(-20, 20, shape).astype(np.float32)
+        sess.run(net['input'].assign(noise))
+        for i in range(500):
+            _, l = sess.run([train, loss])
+            if i % 50 == 0:
+                print(i, l)
+        save_image('out.png', sess.run(net['input']))
+
+
+if __name__ == '__main__':
+    main()
