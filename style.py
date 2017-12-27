@@ -75,14 +75,11 @@ def main():
         style_loss = sum(tf.reduce_mean(tf.square(gram(net[l]) - style_targets[l])) for l in STYLE_LAYERS)
         style_loss /= len(STYLE_LAYERS)
         loss = 5.0 * content_loss + 100.0 * style_loss + 1e-3 * total_variation(net['input'])
-        train = tf.train.AdamOptimizer(2.0).minimize(loss)
-        sess.run(tf.global_variables_initializer())
+        optimizer = tf.contrib.opt.ScipyOptimizerInterface(
+            loss, method='L-BFGS-B', options={'maxiter': 500})
         noise = np.random.uniform(-20, 20, shape).astype(np.float32)
         sess.run(net['input'].assign(noise))
-        for i in range(500):
-            _, l = sess.run([train, loss])
-            if i % 50 == 0:
-                print(i, l)
+        optimizer.minimize(sess, loss_callback=lambda l: print(l))
         save_image('out.png', sess.run(net['input']))
 
 
