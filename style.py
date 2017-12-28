@@ -22,7 +22,8 @@ def load_image(path):
 
 
 def save_image(path, img):
-    scipy.misc.imsave(path, (img + VGG_MEAN)[0])
+    out = np.clip((img + VGG_MEAN)[0], 0, 255).astype(np.uint8)
+    scipy.misc.imsave(path, out)
 
 
 def build_vgg(shape, weights_path='imagenet-vgg-verydeep-19.mat'):
