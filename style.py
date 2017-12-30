@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.io
 import scipy.misc
+import argparse
 import tensorflow as tf
 
 VGG_MEAN = np.array([123.68, 116.779, 103.939]).reshape((1, 1, 1, 3))
@@ -59,10 +60,25 @@ def total_variation(x):
     return tf.reduce_sum(tf.square(dh)) + tf.reduce_sum(tf.square(dw))
 
 
+def parse_args():
+    p = argparse.ArgumentParser()
+    p.add_argument('--content', required=True)
+    p.add_argument('--style', required=True)
+    p.add_argument('--out', default='out/result.png')
+    p.add_argument('--iterations', type=int, default=500)
+    p.add_argument('--content-weight', type=float, default=5.0)
+    p.add_argument('--style-weight', type=float, default=100.0)
+    p.add_argument('--tv-weight', type=float, default=1e-3)
+    p.add_argument('--noise-init', action='store_true')
+    return p.parse_args()
+
+
 def main():
-    content = load_image('content.jpg')
-    style = scipy.misc.imread('style.jpg')
+    args = parse_args()
+    content = load_image(args.content)
+    style = load_style(args.style, content.shape)
     style = style[np.newaxis] - VGG_MEAN
+    style = load_image(args.style)
     shape = content.shape
 
     with tf.Session() as sess:
@@ -75,13 +91,14 @@ def main():
         content_loss = tf.reduce_mean(tf.square(net[CONTENT_LAYER] - content_target))
         style_loss = sum(tf.reduce_mean(tf.square(gram(net[l]) - style_targets[l])) for l in STYLE_LAYERS)
         style_loss /= len(STYLE_LAYERS)
-        loss = 5.0 * content_loss + 100.0 * style_loss + 1e-3 * total_variation(net['input'])
+        loss = (args.content_weight * content_loss + args.style_weight * style_loss
+                + args.tv_weight * total_variation(net['input']))
         optimizer = tf.contrib.opt.ScipyOptimizerInterface(
-            loss, method='L-BFGS-B', options={'maxiter': 500})
+            loss, method='L-BFGS-B', options={'maxiter': args.iterations})
         noise = np.random.uniform(-20, 20, shape).astype(np.float32)
         sess.run(net['input'].assign(noise))
-        optimizer.minimize(sess, loss_callback=lambda l: print(l))
-        save_image('out.png', sess.run(net['input']))
+        optimizer.minimize(sess, loss_callback=lambda l: print(l), fetches=[loss])
+        save_image(args.out, sess.run(net['input']))
 
 
 if __name__ == '__main__':
