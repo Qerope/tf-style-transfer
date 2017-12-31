@@ -22,6 +22,12 @@ def load_image(path):
     return img[np.newaxis] - VGG_MEAN
 
 
+def load_style(path, shape):
+    img = scipy.misc.imread(path, mode='RGB')
+    img = scipy.misc.imresize(img, shape[1:3]).astype(np.float32)
+    return img[np.newaxis] - VGG_MEAN
+
+
 def save_image(path, img):
     out = np.clip((img + VGG_MEAN)[0], 0, 255).astype(np.uint8)
     scipy.misc.imsave(path, out)
@@ -77,8 +83,6 @@ def main():
     args = parse_args()
     content = load_image(args.content)
     style = load_style(args.style, content.shape)
-    style = style[np.newaxis] - VGG_MEAN
-    style = load_image(args.style)
     shape = content.shape
 
     with tf.Session() as sess:
