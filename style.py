@@ -99,8 +99,11 @@ def main():
                 + args.tv_weight * total_variation(net['input']))
         optimizer = tf.contrib.opt.ScipyOptimizerInterface(
             loss, method='L-BFGS-B', options={'maxiter': args.iterations})
-        noise = np.random.uniform(-20, 20, shape).astype(np.float32)
-        sess.run(net['input'].assign(noise))
+        if args.noise_init:
+            init = np.random.uniform(-20, 20, shape).astype(np.float32)
+        else:
+            init = content
+        sess.run(net['input'].assign(init))
         optimizer.minimize(sess, loss_callback=lambda l: print(l), fetches=[loss])
         save_image(args.out, sess.run(net['input']))
 
